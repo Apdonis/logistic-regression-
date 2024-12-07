@@ -1,0 +1,49 @@
+import pandas as pd
+from matplotlib import pyplot as plt
+df = pd.read_csv("images_analyzed_productivity1.csv")
+import numpy as np
+
+x,y = np.loadtxt("images_analyzed_productivity1.csv", delimiter=",", unpack = True, skiprows = 1)
+print(x)
+print(df.head())
+#plt.scatter(df.Age, df.productivity, marker = '+', color= 'red')
+
+#step 2 DROP IRRELEVANT DATA
+#df.drop(['Age'], axis=1, inplace=True)
+#print(df.head())
+
+#STEP3;  DEAL WITH MISSING VALUES
+
+#step 4 convert non-numeric to numeric
+#df.productivity[df.productivity == 'Good'] = 1 //changes all script words 'good' in the column productivity into a value '1'
+
+#step 5 prepare the data (define independent/dependent variables)
+#Y = df['productivity'].values
+#Y=Y.astype('int')
+
+#X = df.drop(labels = ['productivity'], axis=1)
+#print(X.head)
+
+#step 6: split data 
+#from sklearn.model_selection import train_test_split
+#X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size = 0.6, random_state = 20)
+#print(X_test)
+
+#step 7 deinfe the model 
+#from sklearn.linear_model import LogisticRegression
+
+#model = LogisticRegression()
+#model.fit(X_train, y_train)
+
+#step 8 Testing the Model
+
+#prediction_test = model.predict(X_test)
+
+#tep 9 verify accuracy
+
+#from sklearn import metrics
+#print("accuracy =", metrics.accuracy_score(y_test, prediction_test))
+
+#step 10: Weight
+#weights = pd.Series(model.coef_[0], index=X.columns.values)
+#print(weights)
