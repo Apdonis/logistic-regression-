@@ -1,25 +1,89 @@
-from sklearn.datasets import load_breast_cancer #data for predicting whether a tumor is malignant or benign based on breast mass measurment
+import tenseal as ts
+import time
+import numpy as np
+from sklearn.datasets import load_breast_cancer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
-#step 1 generate data
+# Generate data
 def generate_data():
+    start_time = time.time()
     data = load_breast_cancer()
-    X,Y = data.data, data.target
-    print(f"Dataset loaded: {X.shape[0]} samples, {X.shape[1]} features")
-    return X,Y
+    X, Y = data.data, data.target
+    print(f"Dataset loaded: {X.shape[0]} samples, {X.shape[1]} features in {time.time() - start_time:.4f} seconds")
+    return X, Y
 
+# Train the model
 def train_model(X_train, Y_train):
-    model = LogisticRegression(max_iter=100, solver = 'liblinear')
-    model.fit(X_train,Y_train)
-    return model
+    start_time = time.time()
+    model = LogisticRegression(max_iter=100, solver='liblinear')
+    model.fit(X_train, Y_train)
+    training_time = time.time() - start_time
+    return model, training_time
 
-#main 
+# Initialize TenSEAL encryption context
+def initialize_context():
+    context = ts.context(ts.SCHEME_TYPE.CKKS, poly_modulus_degree=8192, coeff_mod_bit_sizes=[60, 40, 40, 60])
+    context.global_scale = 2**40
+    context.generate_galois_keys()
+    print("Encryption context initialized.")
+    return context
+
+# Encrypt data using TenSEAL
+def encrypt_data(context, X):
+    encrypted_data = [ts.ckks_vector(context, x) for x in X]
+    return encrypted_data
+
+# Perform encrypted inference
+def encrypted_inference(model, encrypted_X, context):
+    encrypted_results = []
+    for enc_x in encrypted_X:
+        encrypted_prediction = enc_x.dot(model.coef_[0]) + model.intercept_[0]
+        encrypted_results.append(encrypted_prediction)
+    return encrypted_results
+
+# Measure execution time for encrypted inference
+def measure_execution_time(model, X_test, context):
+    start_time = time.time()
+    encrypted_X_test = encrypt_data(context, X_test)
+    encrypted_results = encrypted_inference(model, encrypted_X_test, context)
+    exec_time = time.time() - start_time
+    print(f"Encrypted inference completed in {exec_time:.4f} seconds")
+    return exec_time
+
+# Scalability test
+def scalability_test(model, context):
+    dataset_sizes = [10, 50, 100, 200, 500]
+    execution_times = []
+
+    for size in dataset_sizes:
+        # Generate random test data
+        X_test_subset = np.random.rand(size, 30)
+        exec_time = measure_execution_time(model, X_test_subset, context)
+        execution_times.append(exec_time)
+        print(f"Dataset size: {size}, Execution time: {exec_time:.4f} seconds")
+    plt.plot(dataset_sizes, execution_times, marker="o")
+    plt.xlabel("Dataset Size")
+    plt.ylabel("Execution Time (seconds)")
+    plt.title("Execution Time vs Dataset Size")
+    plt.grid()
+    plt.show()
+    return dataset_sizes, execution_times
+
+# Main program
 if __name__ == "__main__":
-    #load data
-    X,Y = generate_data()
-    X_train,X_test,Y_train,Y_test = train_test_split(X,Y,test_size=0.2, random_state=42)
+    # Load data
+    X, Y = generate_data()
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
-    #train model
-    model =  train_model(X_train, Y_train)
-    print(f"Model trained. Accuracy: {model.score(X_test, Y_test):.4f}")
+    # Train model
+    model, training_time = train_model(X_train, Y_train)
+    print(f"Model trained in {training_time:.4f} seconds. Accuracy: {model.score(X_test, Y_test):.4f}")
+
+    # Initialize encryption context
+    context = initialize_context()
+
+    # Test encrypted inference and scalability
+    print("Performing scalability tests...")
+    dataset_sizes, execution_times = scalability_test(model, context)
